@@ -108,4 +108,53 @@ describe("hardenApprovedExecutionPaths", () => {
       }
     });
   }
+
+  it.runIf(process.platform !== "win32")(
+    "allows symlink cwd when approval hardening is disabled",
+    () => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-approval-prepare-symlink-"));
+      const real = path.join(tmp, "real");
+      const link = path.join(tmp, "cwd-link");
+      fs.mkdirSync(real, { recursive: true });
+      fs.symlinkSync(real, link, "dir");
+      try {
+        const prepared = buildSystemRunApprovalPlan({
+          command: ["echo", "SAFE"],
+          cwd: link,
+        });
+        expect(prepared.ok).toBe(true);
+        if (!prepared.ok) {
+          throw new Error("unreachable");
+        }
+        expect(prepared.plan.cwd).toBe(link);
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
+    "still rejects non-canonical cwd when approval hardening is required",
+    () => {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-approval-prepare-strict-"));
+      const real = path.join(tmp, "real");
+      const link = path.join(tmp, "cwd-link");
+      fs.mkdirSync(real, { recursive: true });
+      fs.symlinkSync(real, link, "dir");
+      try {
+        const prepared = buildSystemRunApprovalPlan({
+          command: ["echo", "SAFE"],
+          cwd: link,
+          approvedByAsk: true,
+        });
+        expect(prepared.ok).toBe(false);
+        if (prepared.ok) {
+          throw new Error("unreachable");
+        }
+        expect(prepared.message).toContain("canonical cwd");
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    },
+  );
 });

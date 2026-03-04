@@ -219,6 +219,7 @@ export function buildSystemRunApprovalPlan(params: {
   cwd?: unknown;
   agentId?: unknown;
   sessionKey?: unknown;
+  approvedByAsk?: boolean;
 }): { ok: true; plan: SystemRunApprovalPlan; cmdText: string } | { ok: false; message: string } {
   const command = resolveSystemRunCommand({
     command: params.command,
@@ -231,7 +232,7 @@ export function buildSystemRunApprovalPlan(params: {
     return { ok: false, message: "command required" };
   }
   const hardening = hardenApprovedExecutionPaths({
-    approvedByAsk: true,
+    approvedByAsk: params.approvedByAsk ?? false,
     argv: command.argv,
     shellCommand: command.shellCommand,
     cwd: normalizeString(params.cwd) ?? undefined,
