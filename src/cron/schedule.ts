@@ -30,6 +30,21 @@ function resolveCachedCron(expr: string, timezone: string): Cron {
   return next;
 }
 
+function parseFiniteScheduleNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 export function computeNextRunAtMs(schedule: CronSchedule, nowMs: number): number | undefined {
   if (schedule.kind === "at") {
     // Handle both canonical `at` (string) and legacy `atMs` (number) fields.
@@ -51,8 +66,13 @@ export function computeNextRunAtMs(schedule: CronSchedule, nowMs: number): numbe
   }
 
   if (schedule.kind === "every") {
-    const everyMs = Math.max(1, Math.floor(schedule.everyMs));
-    const anchor = Math.max(0, Math.floor(schedule.anchorMs ?? nowMs));
+    const everyMsRaw = parseFiniteScheduleNumber(schedule.everyMs);
+    if (everyMsRaw === null) {
+      return undefined;
+    }
+    const everyMs = Math.max(1, Math.floor(everyMsRaw));
+    const anchorRaw = parseFiniteScheduleNumber((schedule as { anchorMs?: unknown }).anchorMs);
+    const anchor = Math.max(0, Math.floor(anchorRaw ?? nowMs));
     if (nowMs < anchor) {
       return anchor;
     }

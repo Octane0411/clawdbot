@@ -122,6 +122,53 @@ describe("Cron issue regressions", () => {
     cron.stop();
   });
 
+  it("repairs legacy every jobs with numeric-string everyMs fields", async () => {
+    const store = makeStorePath();
+    await writeCronStoreSnapshot(store.storePath, [
+      {
+        id: "legacy-string-every",
+        agentId: "feature-dev_planner",
+        sessionKey: "agent:main:main",
+        name: "legacy string every",
+        enabled: true,
+        schedule: {
+          kind: "every",
+          everyMs: "300000" as unknown as number,
+          anchorMs: "1738770000000" as unknown as number,
+        },
+        sessionTarget: "isolated",
+        wakeMode: "now",
+        payload: { kind: "agentTurn", message: "poll workflow queue" },
+        state: {},
+      },
+    ]);
+
+    const cron = new CronService({
+      cronEnabled: true,
+      storePath: store.storePath,
+      log: noopLogger,
+      enqueueSystemEvent: vi.fn(),
+      requestHeartbeatNow: vi.fn(),
+      runIsolatedAgentJob: vi.fn().mockResolvedValue({ status: "ok", summary: "ok" }),
+    });
+    await cron.start();
+
+    const status = await cron.status();
+    const jobs = await cron.list({ includeDisabled: true });
+    const legacyJob = jobs.find((job) => job.id === "legacy-string-every");
+    expect(Number.isFinite(legacyJob?.state.nextRunAtMs)).toBe(true);
+    expect(Number.isFinite(status.nextWakeAtMs)).toBe(true);
+
+    const persisted = JSON.parse(await fs.readFile(store.storePath, "utf8")) as {
+      jobs: Array<{ id: string; schedule?: { everyMs?: unknown; anchorMs?: unknown } }>;
+    };
+    const persistedLegacyJob = persisted.jobs.find((job) => job.id === "legacy-string-every");
+    expect(typeof persistedLegacyJob?.schedule?.everyMs).toBe("number");
+    expect(typeof persistedLegacyJob?.schedule?.anchorMs).toBe("number");
+
+    cron.stop();
+  });
+
   it("repairs missing nextRunAtMs on non-schedule updates without touching other jobs", async () => {
     const store = makeStorePath();
     const cron = await startCronForStore({ storePath: store.storePath, cronEnabled: false });

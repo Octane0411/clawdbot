@@ -222,6 +222,21 @@ function stripLegacyTopLevelFields(raw: Record<string, unknown>) {
   }
 }
 
+function parseFiniteScheduleNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 async function getFileMtimeMs(path: string): Promise<number | null> {
   try {
     const stats = await fs.promises.stat(path);
@@ -411,15 +426,18 @@ export async function ensureLoaded(
       }
 
       const everyMsRaw = sched.everyMs;
-      const everyMs =
-        typeof everyMsRaw === "number" && Number.isFinite(everyMsRaw)
-          ? Math.floor(everyMsRaw)
-          : null;
+      const everyMsRawParsed = parseFiniteScheduleNumber(everyMsRaw);
+      const everyMs = everyMsRawParsed !== null ? Math.max(1, Math.floor(everyMsRawParsed)) : null;
+      if (everyMsRawParsed !== null && everyMs !== everyMsRaw) {
+        sched.everyMs = everyMs;
+        mutated = true;
+      }
       if ((kind === "every" || sched.kind === "every") && everyMs !== null) {
         const anchorRaw = sched.anchorMs;
+        const parsedAnchor = parseFiniteScheduleNumber(anchorRaw);
         const normalizedAnchor =
-          typeof anchorRaw === "number" && Number.isFinite(anchorRaw)
-            ? Math.max(0, Math.floor(anchorRaw))
+          parsedAnchor !== null
+            ? Math.max(0, Math.floor(parsedAnchor))
             : typeof raw.createdAtMs === "number" && Number.isFinite(raw.createdAtMs)
               ? Math.max(0, Math.floor(raw.createdAtMs))
               : typeof raw.updatedAtMs === "number" && Number.isFinite(raw.updatedAtMs)

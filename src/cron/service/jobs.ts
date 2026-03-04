@@ -52,6 +52,21 @@ function resolveStableCronOffsetMs(jobId: string, staggerMs: number) {
   return offset;
 }
 
+function parseFiniteScheduleNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function computeStaggeredCronNextRunAtMs(job: CronJob, nowMs: number) {
   if (job.schedule.kind !== "cron") {
     return computeNextRunAtMs(job.schedule, nowMs);
@@ -85,12 +100,12 @@ function isFiniteTimestamp(value: unknown): value is number {
 }
 
 function resolveEveryAnchorMs(params: {
-  schedule: { everyMs: number; anchorMs?: number };
+  schedule: { everyMs: number; anchorMs?: unknown };
   fallbackAnchorMs: number;
 }) {
-  const raw = params.schedule.anchorMs;
-  if (isFiniteTimestamp(raw)) {
-    return Math.max(0, Math.floor(raw));
+  const rawAnchor = parseFiniteScheduleNumber(params.schedule.anchorMs);
+  if (rawAnchor !== null) {
+    return Math.max(0, Math.floor(rawAnchor));
   }
   if (isFiniteTimestamp(params.fallbackAnchorMs)) {
     return Math.max(0, Math.floor(params.fallbackAnchorMs));
@@ -201,7 +216,11 @@ export function computeJobNextRunAtMs(job: CronJob, nowMs: number): number | und
     return undefined;
   }
   if (job.schedule.kind === "every") {
-    const everyMs = Math.max(1, Math.floor(job.schedule.everyMs));
+    const everyMsRaw = parseFiniteScheduleNumber((job.schedule as { everyMs?: unknown }).everyMs);
+    if (everyMsRaw === null) {
+      return undefined;
+    }
+    const everyMs = Math.max(1, Math.floor(everyMsRaw));
     const lastRunAtMs = job.state.lastRunAtMs;
     if (typeof lastRunAtMs === "number" && Number.isFinite(lastRunAtMs)) {
       const nextFromLastRun = Math.floor(lastRunAtMs) + everyMs;
