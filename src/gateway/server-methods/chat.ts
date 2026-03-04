@@ -893,16 +893,13 @@ export const chatHandlers: GatewayRequestHandlers = {
         isWebchatClient(client?.connect?.client) || clientMode === GATEWAY_CLIENT_MODES.UI;
       // Channel-agnostic session scopes (main, direct:<peer>, etc.) can leak
       // stale routes across surfaces. Allow main sessions only from non-Webchat
-      // clients so CLI replies can keep the last WA/Telegram route.
+      // clients (CLI/SDK/backends) so they can keep their last external route.
       const canInheritDeliverableRoute = Boolean(
         sessionChannelHint &&
         sessionChannelHint !== INTERNAL_MESSAGE_CHANNEL &&
-        (
-          (!isChannelAgnosticSessionScope && (isChannelScopedSession || hasLegacyChannelPeerShape)) ||
-          (sessionChannelHint === "main" &&
-            client?.connect !== undefined &&
-            !isFromWebchatClient)
-        ),
+        ((!isChannelAgnosticSessionScope &&
+          (isChannelScopedSession || hasLegacyChannelPeerShape)) ||
+          (sessionChannelHint === "main" && client?.connect !== undefined && !isFromWebchatClient)),
       );
       const hasDeliverableRoute =
         canInheritDeliverableRoute &&
