@@ -35,6 +35,7 @@ import {
   formatBillingErrorMessage,
   classifyFailoverReason,
   formatAssistantErrorText,
+  mapStopReason,
   isAuthAssistantError,
   isBillingAssistantError,
   isCompactionFailureError,
@@ -814,6 +815,9 @@ export async function runEmbeddedPiAgent(
             provider,
             model: modelId,
           });
+          const mappedLastAssistantStopReason = lastAssistant
+            ? mapStopReason(lastAssistant.stopReason)
+            : undefined;
           const formattedAssistantErrorText = lastAssistant
             ? formatAssistantErrorText(lastAssistant, {
                 cfg: params.config,
@@ -823,7 +827,7 @@ export async function runEmbeddedPiAgent(
               })
             : undefined;
           const assistantErrorText =
-            lastAssistant?.stopReason === "error"
+            mappedLastAssistantStopReason === "error"
               ? lastAssistant.errorMessage?.trim() || formattedAssistantErrorText
               : undefined;
 
