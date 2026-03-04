@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { OpenClawConfig } from "../../config/config.js";
 import { resolveAuthProfileOrder } from "./auth-profiles.js";
 import {
   ANTHROPIC_CFG,
@@ -143,6 +144,35 @@ describe("resolveAuthProfileOrder", () => {
       provider: "openai-codex",
     });
     expect(order).toEqual([]);
+  });
+  it("accepts legacy api_key profile configs that use type instead of mode", () => {
+    const order = resolveAuthProfileOrder({
+      cfg: {
+        auth: {
+          profiles: {
+            "openai:default": {
+              provider: "openai",
+              type: "api_key",
+            },
+          },
+          order: {
+            openai: ["openai:default"],
+          },
+        },
+      } as unknown as OpenClawConfig,
+      store: {
+        version: 1,
+        profiles: {
+          "openai:default": {
+            type: "api_key",
+            provider: "openai",
+            key: "sk-openai",
+          },
+        },
+      },
+      provider: "openai",
+    });
+    expect(order).toEqual(["openai:default"]);
   });
   it("drops explicit order entries that belong to another provider", () => {
     const order = resolveAuthProfileOrder({

@@ -36,6 +36,15 @@ export function resolveAuthProfileEligibility(params: {
 }): AuthProfileEligibility {
   const providerAuthKey = normalizeProviderIdForAuth(params.provider);
   const cred = params.store.profiles[params.profileId];
+  const resolveProfileMode = (value?: string): "api_key" | "oauth" | "token" | undefined => {
+    if (value === "api-key") {
+      return "api_key";
+    }
+    if (value === "api_key" || value === "oauth" || value === "token") {
+      return value;
+    }
+    return undefined;
+  };
   if (!cred) {
     return { eligible: false, reasonCode: "profile_missing" };
   }
@@ -47,8 +56,9 @@ export function resolveAuthProfileEligibility(params: {
     if (normalizeProviderIdForAuth(profileConfig.provider) !== providerAuthKey) {
       return { eligible: false, reasonCode: "provider_mismatch" };
     }
-    if (profileConfig.mode !== cred.type) {
-      const oauthCompatible = profileConfig.mode === "oauth" && cred.type === "token";
+    const configuredMode = resolveProfileMode(profileConfig.mode ?? (profileConfig as { type?: string }).type);
+    if (configuredMode !== cred.type) {
+      const oauthCompatible = configuredMode === "oauth" && cred.type === "token";
       if (!oauthCompatible) {
         return { eligible: false, reasonCode: "mode_mismatch" };
       }
