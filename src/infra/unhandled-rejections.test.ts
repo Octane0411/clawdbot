@@ -60,6 +60,7 @@ describe("isTransientNetworkError", () => {
       "UND_ERR_SOCKET",
       "UND_ERR_HEADERS_TIMEOUT",
       "UND_ERR_BODY_TIMEOUT",
+      "SQLITE_CANTOPEN",
     ];
 
     for (const code of codes) {
