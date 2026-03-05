@@ -12,9 +12,11 @@
 - Required call shape:
   - `command`: `codex exec --model gpt-5.3-codex-spark --yolo "<goal prompt>"`
   - `pty`: `true`
-  - `workdir`: `<repo-or-task-worktree>`
+  - `workdir`: `<task-worktree>` for issue/PR coding runs
   - `timeout`: `600` (or longer when needed)
 - Do not set `elevated` unless runtime explicitly supports it.
+- For issue/PR coding runs, always start with `pnpm task:start <task-id> [area]` and run Codex in the created linked worktree.
+- Never run Codex coding tasks in repo root (`/Users/octane/claw-workspace/openclaw`).
 - Run Codex in target repo/worktree context.
 - Track run outcome and post concise status updates.
 - Scheduler sends goal-level tasks, not micro-steps.
