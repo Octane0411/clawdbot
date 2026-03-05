@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
+# shellcheck disable=SC1091
+source "$ROOT/.autopr/scripts/common.sh"
+
 branch="$(git rev-parse --abbrev-ref HEAD)"
 if [[ "$branch" != clean/* ]]; then
   echo "task-pr-open must run on a clean/* branch. Current: $branch"
@@ -21,6 +24,15 @@ body_file=".autopr/templates/pr-body.md"
 
 if [ ! -f "$body_file" ]; then
   echo "Missing PR template: $body_file"
+  exit 1
+fi
+
+# Block any accidental automation/system-file leakage before PR creation.
+upstream_ref="$(resolve_base_ref "upstream/main")"
+system_files="$(find_system_files_in_diff "$upstream_ref" || true)"
+if [ -n "$system_files" ]; then
+  echo "[FAIL] Clean branch contains blocked automation/system files vs $upstream_ref:"
+  printf '%s\n' "$system_files" | sed 's/^/  - /'
   exit 1
 fi
 

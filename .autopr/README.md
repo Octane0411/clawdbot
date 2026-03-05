@@ -19,11 +19,13 @@ This folder is the source of truth for the fork automation system.
 
 1. Start task workspace:
    - `pnpm task:start <task-id> [area]`
+   - default base: `origin/main` (keeps fork harness/task commands available)
 2. Implement on `codex/<area>/<task-id>` branch in linked worktree.
 3. Verify hard gates:
    - `pnpm task:verify`
 4. Create clean branch for upstream PR (strips automation/system files):
    - `pnpm task:pr:clean`
+   - captures changes vs `origin/main`, but creates clean branch from `upstream/main`
 5. Open PR from `clean/*` branch:
    - `pnpm task:pr:open`
 

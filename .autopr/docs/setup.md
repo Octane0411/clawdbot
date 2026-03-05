@@ -35,3 +35,8 @@ Optional remote safety bootstrap:
 5. `pnpm task:pr:clean`
 6. switch to created `clean/*` branch
 7. `pnpm task:pr:open`
+
+Notes:
+
+- `task:start` defaults to `origin/main` so task worktrees include fork-local harness scripts.
+- `task:pr:clean` captures task deltas from `origin/main` and creates the PR branch from `upstream/main` for clean upstream diffs.

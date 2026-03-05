@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+# shellcheck disable=SC1091
+source "$ROOT/.autopr/scripts/common.sh"
+
 usage() {
   cat <<USAGE
 Usage:
@@ -27,11 +33,11 @@ area="$(sanitize "${2:-core}")"
 
 branch="codex/${area}/${task_id}"
 worktree_dir=".worktrees/${branch//\//-}"
+task_base_ref="$(resolve_base_ref "${TASK_BASE_REF:-origin/main}")"
 
-root="$(git rev-parse --show-toplevel)"
-cd "$root"
-
-git fetch upstream main
+# Keep both remotes fresh when available. Ignore missing remotes.
+git fetch origin main >/dev/null 2>&1 || true
+git fetch upstream main >/dev/null 2>&1 || true
 
 if git show-ref --verify --quiet "refs/heads/$branch"; then
   echo "Local branch already exists: $branch"
@@ -45,15 +51,19 @@ if [ -d "$worktree_dir" ]; then
 fi
 
 mkdir -p .worktrees
-if git show-ref --verify --quiet "refs/remotes/upstream/main"; then
-  git worktree add "$worktree_dir" -b "$branch" upstream/main
-else
-  git worktree add "$worktree_dir" -b "$branch" origin/main
+git worktree add "$worktree_dir" -b "$branch" "$task_base_ref"
+
+if [ ! -f "$worktree_dir/.autopr/scripts/task-verify" ]; then
+  echo "[FAIL] task harness missing in new worktree: $worktree_dir"
+  echo "       expected: .autopr/scripts/task-verify"
+  echo "       base ref: $task_base_ref"
+  exit 1
 fi
 
 echo "Created task workspace:"
 echo "  branch:   $branch"
 echo "  worktree: $worktree_dir"
+echo "  base:     $task_base_ref"
 echo "Next:"
 echo "  cd $worktree_dir"
 echo "  .autopr/scripts/task-verify"
