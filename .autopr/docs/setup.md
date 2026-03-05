@@ -39,4 +39,6 @@ Optional remote safety bootstrap:
 Notes:
 
 - `task:start` defaults to `origin/main` so task worktrees include fork-local harness scripts.
+- `task:start` now hard-fails if local `main` is ahead of `origin/main`; push `main` first to avoid stale harness in new worktrees.
 - `task:pr:clean` captures task deltas from `origin/main` and creates the PR branch from `upstream/main` for clean upstream diffs.
+- `task:verify` auto-runs `pnpm install` when `node_modules` is missing in the task worktree.

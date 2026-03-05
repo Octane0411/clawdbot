@@ -20,9 +20,11 @@ This folder is the source of truth for the fork automation system.
 1. Start task workspace:
    - `pnpm task:start <task-id> [area]`
    - default base: `origin/main` (keeps fork harness/task commands available)
+   - hard guard: if local `main` is ahead of `origin/main`, task start fails until `git push origin main`
 2. Implement on `codex/<area>/<task-id>` branch in linked worktree.
 3. Verify hard gates:
    - `pnpm task:verify`
+   - auto-installs deps once (`pnpm install`) when `node_modules` is missing in the task worktree
 4. Create clean branch for upstream PR (strips automation/system files):
    - `pnpm task:pr:clean`
    - captures changes vs `origin/main`, but creates clean branch from `upstream/main`

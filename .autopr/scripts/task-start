@@ -39,6 +39,16 @@ task_base_ref="$(resolve_base_ref "${TASK_BASE_REF:-origin/main}")"
 git fetch origin main >/dev/null 2>&1 || true
 git fetch upstream main >/dev/null 2>&1 || true
 
+if git show-ref --verify --quiet "refs/heads/main" && git show-ref --verify --quiet "refs/remotes/origin/main"; then
+  ahead_of_origin="$(git rev-list --count refs/remotes/origin/main..refs/heads/main)"
+  if [ "$ahead_of_origin" -gt 0 ]; then
+    echo "[FAIL] Local main is ahead of origin/main by $ahead_of_origin commit(s)."
+    echo "       Push main to origin before starting new tasks so worktrees get latest harness:"
+    echo "       git push origin main"
+    exit 1
+  fi
+fi
+
 if git show-ref --verify --quiet "refs/heads/$branch"; then
   echo "Local branch already exists: $branch"
   exit 1

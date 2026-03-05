@@ -41,6 +41,9 @@
   - `pnpm task:pr:open`
 - Ensure PR body follows `.autopr/templates/pr-body.md`.
 - Validation checklist in PR body must reflect commands that were actually executed.
+- Recovery policy:
+  - If `pnpm task:verify` fails due missing dependencies, run `pnpm install` in the same task worktree and rerun `pnpm task:verify` once.
+  - If task helper drift is detected (for example `mapfile: command not found` in `.autopr/scripts/task-pr-clean`), sync task branch to latest `origin/main` and rerun task flow.
 
 ## Result Contract (strict)
 

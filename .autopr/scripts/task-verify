@@ -12,6 +12,11 @@ if [ "${1:-}" = "--fast" ]; then
   mode="fast"
 fi
 
+if [ ! -d "$ROOT/node_modules" ]; then
+  echo "[INFO] node_modules missing in task worktree; running pnpm install once"
+  pnpm install
+fi
+
 base_ref="$(resolve_base_ref "${BASE_REF:-origin/main}")"
 branch="$(git rev-parse --abbrev-ref HEAD)"
 errors=0
