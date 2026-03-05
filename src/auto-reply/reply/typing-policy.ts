@@ -1,4 +1,4 @@
-import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
+import { isInternalMessageChannel } from "../../utils/message-channel.js";
 import type { TypingPolicy } from "../types.js";
 
 export type ResolveRunTypingPolicyParams = {
@@ -19,7 +19,7 @@ export function resolveRunTypingPolicy(
 ): ResolvedRunTypingPolicy {
   const typingPolicy = params.isHeartbeat
     ? "heartbeat"
-    : params.originatingChannel === INTERNAL_MESSAGE_CHANNEL
+    : isInternalMessageChannel(params.originatingChannel)
       ? "internal_webchat"
       : params.systemEvent
         ? "system_event"

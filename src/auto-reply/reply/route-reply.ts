@@ -12,7 +12,11 @@ import { resolveEffectiveMessagesConfig } from "../../agents/identity.js";
 import { normalizeChannelId } from "../../channels/plugins/index.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { buildOutboundSessionContext } from "../../infra/outbound/session-context.js";
-import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
+import {
+  InternalMessageChannel,
+  isInternalMessageChannel,
+  normalizeMessageChannel,
+} from "../../utils/message-channel.js";
 import type { OriginatingChannelType } from "../templating.js";
 import type { ReplyPayload } from "../types.js";
 import { normalizeReplyPayload } from "./normalize-reply.js";
@@ -112,10 +116,10 @@ export async function routeReply(params: RouteReplyParams): Promise<RouteReplyRe
     return { ok: true };
   }
 
-  if (channel === INTERNAL_MESSAGE_CHANNEL) {
+  if (isInternalMessageChannel(channel)) {
     return {
       ok: false,
-      error: "Webchat routing not supported for queued replies",
+      error: "Internal routing channel not supported for queued replies",
     };
   }
 
@@ -183,8 +187,8 @@ export async function routeReply(params: RouteReplyParams): Promise<RouteReplyRe
  */
 export function isRoutableChannel(
   channel: OriginatingChannelType | undefined,
-): channel is Exclude<OriginatingChannelType, typeof INTERNAL_MESSAGE_CHANNEL> {
-  if (!channel || channel === INTERNAL_MESSAGE_CHANNEL) {
+): channel is Exclude<OriginatingChannelType, InternalMessageChannel> {
+  if (!channel || isInternalMessageChannel(channel)) {
     return false;
   }
   return normalizeChannelId(channel) !== null;

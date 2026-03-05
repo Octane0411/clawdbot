@@ -7,8 +7,8 @@ import {
   normalizeDeliveryContext,
 } from "../../utils/delivery-context.js";
 import {
-  INTERNAL_MESSAGE_CHANNEL,
   isDeliverableMessageChannel,
+  isInternalMessageChannel,
   normalizeMessageChannel,
 } from "../../utils/message-channel.js";
 import type { MsgContext } from "../templating.js";
@@ -40,7 +40,7 @@ function isMainSessionKey(sessionKey?: string): boolean {
 
 function isExternalRoutingChannel(channel?: string): channel is string {
   return Boolean(
-    channel && channel !== INTERNAL_MESSAGE_CHANNEL && isDeliverableMessageChannel(channel),
+    channel && !isInternalMessageChannel(channel) && isDeliverableMessageChannel(channel),
   );
 }
 
@@ -50,7 +50,7 @@ export function resolveLastChannelRaw(params: {
   sessionKey?: string;
 }): string | undefined {
   const originatingChannel = normalizeMessageChannel(params.originatingChannelRaw);
-  if (originatingChannel === INTERNAL_MESSAGE_CHANNEL && isMainSessionKey(params.sessionKey)) {
+  if (isInternalMessageChannel(originatingChannel) && isMainSessionKey(params.sessionKey)) {
     return params.originatingChannelRaw;
   }
   const persistedChannel = normalizeMessageChannel(params.persistedLastChannel);
@@ -77,7 +77,7 @@ export function resolveLastToRaw(params: {
   sessionKey?: string;
 }): string | undefined {
   const originatingChannel = normalizeMessageChannel(params.originatingChannelRaw);
-  if (originatingChannel === INTERNAL_MESSAGE_CHANNEL && isMainSessionKey(params.sessionKey)) {
+  if (isInternalMessageChannel(originatingChannel) && isMainSessionKey(params.sessionKey)) {
     return params.originatingToRaw || params.toRaw;
   }
   const persistedChannel = normalizeMessageChannel(params.persistedLastChannel);

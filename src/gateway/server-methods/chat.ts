@@ -18,9 +18,9 @@ import {
   stripInlineDirectiveTagsFromMessageForDisplay,
 } from "../../utils/directive-tags.js";
 import {
-  INTERNAL_MESSAGE_CHANNEL,
-  isWebchatClient,
+  isInternalMessageChannel,
   normalizeMessageChannel,
+  resolveInboundMessageChannel,
 } from "../../utils/message-channel.js";
 import {
   abortChatRunById,
@@ -32,11 +32,7 @@ import {
 } from "../chat-abort.js";
 import { type ChatImageContent, parseMessageWithAttachments } from "../chat-attachments.js";
 import { stripEnvelopeFromMessage, stripEnvelopeFromMessages } from "../chat-sanitize.js";
-import {
-  GATEWAY_CLIENT_CAPS,
-  GATEWAY_CLIENT_MODES,
-  hasGatewayClientCap,
-} from "../protocol/client-info.js";
+import { GATEWAY_CLIENT_CAPS, hasGatewayClientCap } from "../protocol/client-info.js";
 import {
   ErrorCodes,
   errorShape,
@@ -864,7 +860,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       );
       const commandBody = injectThinking ? `/think ${p.thinking} ${parsedMessage}` : parsedMessage;
       const clientInfo = client?.connect?.client;
-      const shouldDeliverExternally = p.deliver === true;
+      const inboundInternalChannel = resolveInboundMessageChannel(client?.connect);
       const routeChannelCandidate = normalizeMessageChannel(
         entry?.deliveryContext?.channel ?? entry?.lastChannel,
       );
@@ -876,12 +872,11 @@ export const chatHandlers: GatewayRequestHandlers = {
       const sessionScopeParts = (parsedSessionKey?.rest ?? sessionKey).split(":").filter(Boolean);
       const sessionScopeHead = sessionScopeParts[0];
       const sessionChannelHint = normalizeMessageChannel(sessionScopeHead);
-      const normalizedSessionScopeHead = (sessionScopeHead ?? "").trim().toLowerCase();
       const sessionPeerShapeCandidates = [sessionScopeParts[1], sessionScopeParts[2]]
         .map((part) => (part ?? "").trim().toLowerCase())
         .filter(Boolean);
       const isChannelAgnosticSessionScope = CHANNEL_AGNOSTIC_SESSION_SCOPES.has(
-        normalizedSessionScopeHead,
+        (sessionScopeHead ?? "").trim().toLowerCase(),
       );
       const isChannelScopedSession = sessionPeerShapeCandidates.some((part) =>
         CHANNEL_SCOPED_SESSION_SHAPES.has(part),
@@ -890,32 +885,24 @@ export const chatHandlers: GatewayRequestHandlers = {
         !isChannelScopedSession &&
         typeof sessionScopeParts[1] === "string" &&
         sessionChannelHint === routeChannelCandidate;
-      const clientMode = client?.connect?.client?.mode;
-      const isFromWebchatClient =
-        isWebchatClient(client?.connect?.client) || clientMode === GATEWAY_CLIENT_MODES.UI;
-      const configuredMainKey = (cfg.session?.mainKey ?? "main").trim().toLowerCase();
-      const isConfiguredMainSessionScope =
-        normalizedSessionScopeHead.length > 0 && normalizedSessionScopeHead === configuredMainKey;
-      // Channel-agnostic session scopes (main, direct:<peer>, etc.) can leak
-      // stale routes across surfaces. Allow configured main sessions from
-      // non-Webchat/UI clients (e.g., CLI, backend) to keep the last external route.
+      // Only inherit prior external route metadata for channel-scoped sessions.
+      // Channel-agnostic sessions (main, direct:<peer>, etc.) can otherwise
+      // leak stale routes across surfaces.
       const canInheritDeliverableRoute = Boolean(
         sessionChannelHint &&
-        sessionChannelHint !== INTERNAL_MESSAGE_CHANNEL &&
-        ((!isChannelAgnosticSessionScope &&
-          (isChannelScopedSession || hasLegacyChannelPeerShape)) ||
-          (isConfiguredMainSessionScope && client?.connect !== undefined && !isFromWebchatClient)),
+        !isInternalMessageChannel(sessionChannelHint) &&
+        !isChannelAgnosticSessionScope &&
+        (isChannelScopedSession || hasLegacyChannelPeerShape),
       );
       const hasDeliverableRoute =
-        shouldDeliverExternally &&
         canInheritDeliverableRoute &&
         routeChannelCandidate &&
-        routeChannelCandidate !== INTERNAL_MESSAGE_CHANNEL &&
+        !isInternalMessageChannel(routeChannelCandidate) &&
         typeof routeToCandidate === "string" &&
         routeToCandidate.trim().length > 0;
       const originatingChannel = hasDeliverableRoute
         ? routeChannelCandidate
-        : INTERNAL_MESSAGE_CHANNEL;
+        : inboundInternalChannel;
       const originatingTo = hasDeliverableRoute ? routeToCandidate : undefined;
       const accountId = hasDeliverableRoute ? routeAccountIdCandidate : undefined;
       const messageThreadId = hasDeliverableRoute ? routeThreadIdCandidate : undefined;
@@ -931,8 +918,8 @@ export const chatHandlers: GatewayRequestHandlers = {
         RawBody: parsedMessage,
         CommandBody: commandBody,
         SessionKey: sessionKey,
-        Provider: INTERNAL_MESSAGE_CHANNEL,
-        Surface: INTERNAL_MESSAGE_CHANNEL,
+        Provider: inboundInternalChannel,
+        Surface: inboundInternalChannel,
         OriginatingChannel: originatingChannel,
         OriginatingTo: originatingTo,
         AccountId: accountId,
@@ -953,7 +940,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       const { onModelSelected, ...prefixOptions } = createReplyPrefixOptions({
         cfg,
         agentId,
-        channel: INTERNAL_MESSAGE_CHANNEL,
+        channel: inboundInternalChannel,
       });
       const finalReplyParts: string[] = [];
       const dispatcher = createReplyDispatcher({

@@ -15,7 +15,12 @@ import {
 import { getActivePluginRegistry } from "../plugins/runtime.js";
 
 export const INTERNAL_MESSAGE_CHANNEL = "webchat" as const;
-export type InternalMessageChannel = typeof INTERNAL_MESSAGE_CHANNEL;
+export const TUI_MESSAGE_CHANNEL = "tui" as const;
+export type InternalMessageChannel = typeof INTERNAL_MESSAGE_CHANNEL | typeof TUI_MESSAGE_CHANNEL;
+const INTERNAL_MESSAGE_CHANNELS = new Set<InternalMessageChannel>([
+  INTERNAL_MESSAGE_CHANNEL,
+  TUI_MESSAGE_CHANNEL,
+]);
 
 const MARKDOWN_CAPABLE_CHANNELS = new Set<string>([
   "slack",
@@ -23,7 +28,7 @@ const MARKDOWN_CAPABLE_CHANNELS = new Set<string>([
   "signal",
   "discord",
   "googlechat",
-  "tui",
+  TUI_MESSAGE_CHANNEL,
   INTERNAL_MESSAGE_CHANNEL,
 ]);
 
@@ -34,6 +39,7 @@ export { normalizeGatewayClientName, normalizeGatewayClientMode };
 type GatewayClientInfoLike = {
   mode?: string | null;
   id?: string | null;
+  displayName?: string | null;
 };
 
 export function isGatewayCliClient(client?: GatewayClientInfoLike | null): boolean {
@@ -41,7 +47,15 @@ export function isGatewayCliClient(client?: GatewayClientInfoLike | null): boole
 }
 
 export function isInternalMessageChannel(raw?: string | null): raw is InternalMessageChannel {
-  return normalizeMessageChannel(raw) === INTERNAL_MESSAGE_CHANNEL;
+  const normalized = normalizeMessageChannel(raw);
+  return normalized != null && INTERNAL_MESSAGE_CHANNELS.has(normalized as InternalMessageChannel);
+}
+
+export function resolveInboundMessageChannel(
+  client?: GatewayClientInfoLike | null,
+): InternalMessageChannel {
+  const mode = normalizeGatewayClientMode(client?.mode);
+  return mode === GATEWAY_CLIENT_MODES.UI ? TUI_MESSAGE_CHANNEL : INTERNAL_MESSAGE_CHANNEL;
 }
 
 export function isWebchatClient(client?: GatewayClientInfoLike | null): boolean {
@@ -57,8 +71,8 @@ export function normalizeMessageChannel(raw?: string | null): string | undefined
   if (!normalized) {
     return undefined;
   }
-  if (normalized === INTERNAL_MESSAGE_CHANNEL) {
-    return INTERNAL_MESSAGE_CHANNEL;
+  if (INTERNAL_MESSAGE_CHANNELS.has(normalized as InternalMessageChannel)) {
+    return normalized as InternalMessageChannel;
   }
   const builtIn = normalizeChatChannelId(normalized);
   if (builtIn) {
@@ -101,7 +115,7 @@ export type GatewayMessageChannel = DeliverableMessageChannel | InternalMessageC
 
 export const listGatewayMessageChannels = (): GatewayMessageChannel[] => [
   ...listDeliverableMessageChannels(),
-  INTERNAL_MESSAGE_CHANNEL,
+  ...INTERNAL_MESSAGE_CHANNELS,
 ];
 
 export const listGatewayAgentChannelAliases = (): string[] =>

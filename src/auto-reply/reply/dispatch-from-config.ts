@@ -19,7 +19,7 @@ import {
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
 import { maybeApplyTtsToPayload, normalizeTtsAutoMode, resolveTtsConfig } from "../../tts/tts.js";
-import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
+import { isInternalMessageChannel, normalizeMessageChannel } from "../../utils/message-channel.js";
 import { getReplyFromConfig } from "../reply.js";
 import type { FinalizedMsgContext } from "../templating.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
@@ -165,7 +165,6 @@ export async function dispatchReplyFromConfig(params: {
   }
 
   const sessionStoreEntry = resolveSessionStoreEntry(ctx, cfg);
-  const acpDispatchSessionKey = sessionStoreEntry.sessionKey ?? sessionKey;
   const inboundAudio = isInboundAudioContext(ctx);
   const sessionTtsAuto = normalizeTtsAutoMode(sessionStoreEntry.entry?.ttsAuto);
   const hookRunner = getGlobalHookRunner();
@@ -219,7 +218,7 @@ export async function dispatchReplyFromConfig(params: {
     isRoutableChannel(originatingChannel) && originatingTo && originatingChannel !== currentSurface,
   );
   const shouldSuppressTyping =
-    shouldRouteToOriginating || originatingChannel === INTERNAL_MESSAGE_CHANNEL;
+    shouldRouteToOriginating || isInternalMessageChannel(originatingChannel);
   const ttsChannel = shouldRouteToOriginating ? originatingChannel : currentSurface;
 
   /**
@@ -329,7 +328,7 @@ export async function dispatchReplyFromConfig(params: {
       ctx,
       cfg,
       dispatcher,
-      sessionKey: acpDispatchSessionKey,
+      sessionKey,
       inboundAudio,
       sessionTtsAuto,
       ttsChannel,
@@ -434,32 +433,6 @@ export async function dispatchReplyFromConfig(params: {
       },
       cfg,
     );
-
-    if (ctx.AcpDispatchTailAfterReset === true) {
-      // Command handling prepared a trailing prompt after ACP in-place reset.
-      // Route that tail through ACP now (same turn) instead of embedded dispatch.
-      ctx.AcpDispatchTailAfterReset = false;
-      const acpTailDispatch = await tryDispatchAcpReply({
-        ctx,
-        cfg,
-        dispatcher,
-        sessionKey: acpDispatchSessionKey,
-        inboundAudio,
-        sessionTtsAuto,
-        ttsChannel,
-        shouldRouteToOriginating,
-        originatingChannel,
-        originatingTo,
-        shouldSendToolSummaries,
-        bypassForCommand: false,
-        onReplyStart: params.replyOptions?.onReplyStart,
-        recordProcessed,
-        markIdle,
-      });
-      if (acpTailDispatch) {
-        return acpTailDispatch;
-      }
-    }
 
     const replies = replyResult ? (Array.isArray(replyResult) ? replyResult : [replyResult]) : [];
 
