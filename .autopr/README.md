@@ -36,3 +36,4 @@ This folder is the source of truth for the fork automation system.
 
 - Keep automation changes in this fork.
 - Do not include `.autopr/**` in upstream PRs.
+- Portable OpenClaw runtime bootstrap is stored in `setup/openclaw/`.

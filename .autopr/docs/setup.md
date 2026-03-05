@@ -1,5 +1,17 @@
 # AutoPR Setup on a New Machine
 
+## 0) Restore OpenClaw runtime from repo (portable setup)
+
+1. Install runtime config + scheduler workspace:
+   - `MINIMAX_API_KEY=... OPENCLAW_TELEGRAM_BOT_TOKEN=... bash setup/openclaw/install-local.sh`
+2. Restart and verify gateway:
+   - `openclaw gateway restart`
+   - `openclaw gateway status --json`
+
+Optional remote safety bootstrap:
+
+- `OPENCLAW_FORK_REMOTE_URL=git@github.com:<you>/openclaw.git bash setup/openclaw/configure-remotes.sh /path/to/repo`
+
 1. Clone your fork repository.
 2. Install dependencies:
    - `pnpm install`
