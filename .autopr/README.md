@@ -22,6 +22,7 @@ This folder is the source of truth for the fork automation system.
    - default base: `origin/main` (keeps fork harness/task commands available)
    - hard guard: if local `main` is ahead of `origin/main`, task start fails until `git push origin main`
 2. Implement on `codex/<area>/<task-id>` branch in linked worktree.
+   - commit task changes on the `codex/*/*` branch before clean-PR step
 3. Verify hard gates:
    - `pnpm task:verify`
    - auto-installs deps once (`pnpm install`) when `node_modules` is missing in the task worktree

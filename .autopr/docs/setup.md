@@ -31,10 +31,11 @@ Optional remote safety bootstrap:
 1. `pnpm task:start <task-id> [area]`
 2. `cd .worktrees/codex-<area>-<task-id>`
 3. implement changes
-4. `pnpm task:verify`
-5. `pnpm task:pr:clean`
-6. switch to created `clean/*` branch
-7. `pnpm task:pr:open`
+4. commit task changes on `codex/*/*` branch
+5. `pnpm task:verify`
+6. `pnpm task:pr:clean`
+7. switch to created `clean/*` branch
+8. `pnpm task:pr:open`
 
 Notes:
 

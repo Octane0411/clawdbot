@@ -36,6 +36,7 @@
 - Require completion of the standard flow:
   - `pnpm task:start <task-id> [area]`
   - implement in `codex/*/*`
+  - commit task changes on `codex/*/*`
   - `pnpm task:verify`
   - `pnpm task:pr:clean`
   - `pnpm task:pr:open`

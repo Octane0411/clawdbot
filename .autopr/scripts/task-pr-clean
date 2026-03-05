@@ -13,6 +13,13 @@ if ! is_autopr_branch "$source_branch"; then
   exit 1
 fi
 
+if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+  echo "[FAIL] Working tree has uncommitted changes on $source_branch."
+  echo "       Commit task changes first, then rerun task:pr:clean."
+  echo "       Suggested: ./scripts/committer \"<message>\" <files...>"
+  exit 1
+fi
+
 diff_base_ref="$(resolve_base_ref "${DIFF_BASE_REF:-${BASE_REF:-origin/main}}")"
 clean_base_ref="$(resolve_base_ref "${CLEAN_BASE_REF:-upstream/main}")"
 base_commit="$(git rev-parse "$clean_base_ref")"
