@@ -1,4 +1,5 @@
 import { CHANNEL_IDS } from "../channels/registry.js";
+import { createHash } from "node:crypto";
 import { VERSION } from "../version.js";
 import type { ConfigUiHint, ConfigUiHints } from "./schema.hints.js";
 import { applySensitiveHints, buildBaseHints, mapSensitivePaths } from "./schema.hints.js";
@@ -322,7 +323,8 @@ function buildMergedSchemaCacheKey(params: {
       configUiHints: channel.configUiHints ?? null,
     }))
     .toSorted((a, b) => a.id.localeCompare(b.id));
-  return JSON.stringify({ plugins, channels });
+  const serialized = JSON.stringify({ plugins, channels });
+  return createHash("sha256").update(serialized).digest("hex");
 }
 
 function setMergedSchemaCache(key: string, value: ConfigSchemaResponse): void {
