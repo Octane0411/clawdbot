@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROFILES_DIR="$ROOT/.autopr/profiles"
+ACTIVE_FILE="$ROOT/.autopr/profile.active"
+CANON_PR_BODY="$ROOT/.autopr/templates/pr-body.md"
+CANON_AGENTS="$ROOT/setup/openclaw/templates/workspace-scheduler/AGENTS.md"
+CANON_HEARTBEAT="$ROOT/setup/openclaw/templates/workspace-scheduler/HEARTBEAT.md"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/autopr-profile list
+  scripts/autopr-profile current
+  scripts/autopr-profile apply <profile> [--sync-runtime]
+USAGE
+}
+
+active_profile() {
+  if [[ -f "$ACTIVE_FILE" ]]; then
+    tr -d '[:space:]' < "$ACTIVE_FILE"
+  else
+    printf '%s\n' "baseline"
+  fi
+}
+
+profile_dir() {
+  local profile="$1"
+  printf '%s\n' "$PROFILES_DIR/$profile"
+}
+
+assert_profile_exists() {
+  local profile="$1"
+  local dir
+  dir="$(profile_dir "$profile")"
+  [[ -d "$dir" ]] || {
+    echo "Unknown profile: $profile" >&2
+    echo "Run: scripts/autopr-profile list" >&2
+    exit 1
+  }
+}
+
+list_profiles() {
+  local active
+  active="$(active_profile)"
+  find "$PROFILES_DIR" -mindepth 1 -maxdepth 1 -type d -print \
+    | sed "s#^$PROFILES_DIR/##" \
+    | sort \
+    | while IFS= read -r profile; do
+        if [[ "$profile" == "$active" ]]; then
+          printf '* %s (active)\n' "$profile"
+        else
+          printf '  %s\n' "$profile"
+        fi
+      done
+}
+
+copy_profile_to_templates() {
+  local profile="$1"
+  local dir
+  dir="$(profile_dir "$profile")"
+  cp "$dir/pr-body.md" "$CANON_PR_BODY"
+  cp "$dir/workspace-scheduler/AGENTS.md" "$CANON_AGENTS"
+  cp "$dir/workspace-scheduler/HEARTBEAT.md" "$CANON_HEARTBEAT"
+  printf '%s\n' "$profile" > "$ACTIVE_FILE"
+}
+
+sync_runtime_workspace() {
+  local profile="$1"
+  local dir
+  local target_home target_workspace
+  dir="$(profile_dir "$profile")"
+  target_home="${OPENCLAW_HOME:-$HOME/.openclaw}"
+  target_workspace="$target_home/workspace-scheduler"
+  mkdir -p "$target_workspace"
+  cp "$dir/workspace-scheduler/AGENTS.md" "$target_workspace/AGENTS.md"
+  cp "$dir/workspace-scheduler/HEARTBEAT.md" "$target_workspace/HEARTBEAT.md"
+  echo "Synced runtime workspace profile '$profile' -> $target_workspace"
+}
+
+if [[ "${1:-}" == "--" ]]; then
+  shift
+fi
+
+cmd="${1:-}"
+case "$cmd" in
+  list)
+    if [[ $# -ne 1 ]]; then
+      usage
+      exit 2
+    fi
+    list_profiles
+    ;;
+  current)
+    if [[ $# -ne 1 ]]; then
+      usage
+      exit 2
+    fi
+    active_profile
+    ;;
+  apply)
+    if [[ $# -lt 2 || $# -gt 3 ]]; then
+      usage
+      exit 2
+    fi
+    profile="$2"
+    sync_runtime=0
+    if [[ "${3:-}" == "--sync-runtime" ]]; then
+      sync_runtime=1
+    elif [[ $# -eq 3 ]]; then
+      usage
+      exit 2
+    fi
+    assert_profile_exists "$profile"
+    copy_profile_to_templates "$profile"
+    echo "Applied AutoPR profile: $profile"
+    if [[ "$sync_runtime" -eq 1 ]]; then
+      sync_runtime_workspace "$profile"
+    fi
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac

@@ -16,6 +16,7 @@ Optional:
 
 - `OPENCLAW_HOME` (default: `~/.openclaw`)
 - `OPENCLAW_GATEWAY_TOKEN` (generated automatically if missing)
+- `OPENCLAW_AUTOPR_PROFILE` (default: `.autopr/profile.active`)
 
 ## Install
 
@@ -30,6 +31,12 @@ Then restart gateway:
 ```bash
 openclaw gateway restart
 openclaw gateway status --json
+```
+
+Switch scheduler profile in runtime workspace without reinstall:
+
+```bash
+bash setup/openclaw/sync-scheduler-workspace.sh <profile>
 ```
 
 ## Remote safety (fork + upstream)

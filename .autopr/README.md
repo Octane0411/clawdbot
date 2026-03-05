@@ -2,6 +2,19 @@
 
 This folder is the source of truth for the fork automation system.
 
+## Profiled Harness (A/B)
+
+- Versioned profiles live in `.autopr/profiles/`.
+- Active profile is tracked in `.autopr/profile.active`.
+- Apply/switch profile:
+  - `pnpm autopr:profile -- apply <profile>`
+- List profiles:
+  - `pnpm autopr:profile -- list`
+- Show active profile:
+  - `pnpm autopr:profile -- current`
+- Apply and sync runtime workspace:
+  - `pnpm autopr:profile -- apply <profile> --sync-runtime`
+
 ## Workflow
 
 1. Start task workspace:

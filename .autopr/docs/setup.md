@@ -15,13 +15,16 @@ Optional remote safety bootstrap:
 1. Clone your fork repository.
 2. Install dependencies:
    - `pnpm install`
-3. Enable git hooks path (repo already does this on prepare, but enforce once):
+3. Select AutoPR profile (A/B):
+   - `pnpm autopr:profile -- list`
+   - `pnpm autopr:profile -- apply <profile> --sync-runtime`
+4. Enable git hooks path (repo already does this on prepare, but enforce once):
    - `git config core.hooksPath git-hooks`
-4. Enforce remote naming:
+5. Enforce remote naming:
    - `origin` => your fork
    - `upstream` => `openclaw/openclaw` (push disabled)
-5. Verify OpenClaw profile exists and gateway is running.
-6. Ensure scheduler/codex agents are present in `~/.openclaw/openclaw.json`.
+6. Verify OpenClaw profile exists and gateway is running.
+7. Ensure scheduler/codex agents are present in `~/.openclaw/openclaw.json`.
 
 ## First task
 
