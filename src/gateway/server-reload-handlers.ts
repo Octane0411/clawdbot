@@ -16,7 +16,7 @@ import {
 } from "../infra/restart.js";
 import { setCommandLaneConcurrency, getTotalQueueSize } from "../process/command-queue.js";
 import { CommandLane } from "../process/lanes.js";
-import type { ChannelHealthMonitor } from "./channel-health-monitor.js";
+import type { ChannelHealthMonitor, ChannelHealthMonitorDeps } from "./channel-health-monitor.js";
 import type { ChannelKind } from "./config-reload-plan.js";
 import type { GatewayReloadPlan } from "./config-reload.js";
 import { resolveHooksConfig } from "./hooks.js";
@@ -47,7 +47,10 @@ export function createGatewayReloadHandlers(params: {
   logChannels: { info: (msg: string) => void; error: (msg: string) => void };
   logCron: { error: (msg: string) => void };
   logReload: { info: (msg: string) => void; warn: (msg: string) => void };
-  createHealthMonitor: (checkIntervalMs: number) => ChannelHealthMonitor;
+  createHealthMonitor: (
+    checkIntervalMs: number,
+    timing?: ChannelHealthMonitorDeps["timing"],
+  ) => ChannelHealthMonitor;
 }) {
   const applyHotReload = async (
     plan: GatewayReloadPlan,
@@ -97,8 +100,11 @@ export function createGatewayReloadHandlers(params: {
     if (plan.restartHealthMonitor) {
       state.channelHealthMonitor?.stop();
       const minutes = nextConfig.gateway?.channelHealthCheckMinutes;
+      const healthMonitorTiming = nextConfig.gateway?.healthMonitor?.timing;
       nextState.channelHealthMonitor =
-        minutes === 0 ? null : params.createHealthMonitor((minutes ?? 5) * 60_000);
+        minutes === 0
+          ? null
+          : params.createHealthMonitor((minutes ?? 5) * 60_000, healthMonitorTiming);
     }
 
     if (plan.restartGmailWatcher) {

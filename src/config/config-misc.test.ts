@@ -169,6 +169,37 @@ describe("gateway.channelHealthCheckMinutes", () => {
   });
 });
 
+describe("gateway.healthMonitor.timing.staleEventThresholdMs", () => {
+  it("accepts positive ms value", () => {
+    const res = validateConfigObject({
+      gateway: {
+        healthMonitor: {
+          timing: {
+            staleEventThresholdMs: 30_000,
+          },
+        },
+      },
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it("rejects non-positive values", () => {
+    const res = validateConfigObject({
+      gateway: {
+        healthMonitor: {
+          timing: {
+            staleEventThresholdMs: 0,
+          },
+        },
+      },
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.issues[0]?.path).toBe("gateway.healthMonitor.timing.staleEventThresholdMs");
+    }
+  });
+});
+
 describe("cron webhook schema", () => {
   it("accepts cron.webhookToken and legacy cron.webhook", () => {
     const res = OpenClawSchema.safeParse({

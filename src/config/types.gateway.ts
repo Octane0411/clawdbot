@@ -197,6 +197,19 @@ export type GatewayReloadConfig = {
   debounceMs?: number;
 };
 
+export type GatewayHealthMonitorTimingConfig = {
+  /**
+   * Maximum event gap (ms) before a connected channel is treated as stale.
+   * Defaults to 30 minutes in the monitor implementation.
+   */
+  staleEventThresholdMs?: number;
+};
+
+export type GatewayHealthMonitorConfig = {
+  /** Timing controls for health monitor behavior. */
+  timing?: GatewayHealthMonitorTimingConfig;
+};
+
 export type GatewayHttpChatCompletionsConfig = {
   /**
    * If false, the Gateway will not serve `POST /v1/chat/completions`.
@@ -364,4 +377,8 @@ export type GatewayConfig = {
    * Set to 0 to disable. Default: 5.
    */
   channelHealthCheckMinutes?: number;
+  /**
+   * Health-monitor tuning values for stale-event detection.
+   */
+  healthMonitor?: GatewayHealthMonitorConfig;
 };
