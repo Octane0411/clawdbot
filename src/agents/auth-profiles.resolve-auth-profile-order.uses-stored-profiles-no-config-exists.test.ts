@@ -174,6 +174,35 @@ describe("resolveAuthProfileOrder", () => {
     });
     expect(order).toEqual(["openai:default"]);
   });
+  it("accepts legacy mode values that use api-key for api_key profiles", () => {
+    const order = resolveAuthProfileOrder({
+      cfg: {
+        auth: {
+          profiles: {
+            "openai:default": {
+              provider: "openai",
+              mode: "api-key",
+            },
+          },
+          order: {
+            openai: ["openai:default"],
+          },
+        },
+      } as unknown as OpenClawConfig,
+      store: {
+        version: 1,
+        profiles: {
+          "openai:default": {
+            type: "api_key",
+            provider: "openai",
+            key: "sk-openai",
+          },
+        },
+      },
+      provider: "openai",
+    });
+    expect(order).toEqual(["openai:default"]);
+  });
   it("drops explicit order entries that belong to another provider", () => {
     const order = resolveAuthProfileOrder({
       cfg: {
@@ -201,6 +230,37 @@ describe("resolveAuthProfileOrder", () => {
       provider: "minimax",
     });
     expect(order).toEqual(["minimax:prod"]);
+  });
+  it("treats token and oauth profile modes as compatible for matching profiles", () => {
+    const order = resolveAuthProfileOrder({
+      cfg: {
+        auth: {
+          profiles: {
+            "anthropic:default": {
+              provider: "anthropic",
+              mode: "token",
+            },
+          },
+          order: {
+            anthropic: ["anthropic:default"],
+          },
+        },
+      },
+      store: {
+        version: 1,
+        profiles: {
+          "anthropic:default": {
+            type: "oauth",
+            provider: "anthropic",
+            access: "oauth-token",
+            refresh: "refresh-token",
+            expires: Date.now() + 60_000,
+          },
+        },
+      },
+      provider: "anthropic",
+    });
+    expect(order).toEqual(["anthropic:default"]);
   });
   it.each([
     {

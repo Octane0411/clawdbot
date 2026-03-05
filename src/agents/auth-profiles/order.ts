@@ -45,6 +45,20 @@ export function resolveAuthProfileEligibility(params: {
     }
     return undefined;
   };
+  const isCompatibleMode = (
+    configuredMode: "api_key" | "oauth" | "token" | undefined,
+    credentialType: "api_key" | "oauth" | "token",
+  ): boolean => {
+    if (!configuredMode || !credentialType) {
+      return false;
+    }
+    if (configuredMode === credentialType) {
+      return true;
+    }
+    const isBearerMode = (mode: "api_key" | "oauth" | "token"): boolean =>
+      mode === "oauth" || mode === "token";
+    return isBearerMode(configuredMode) && isBearerMode(credentialType);
+  };
   if (!cred) {
     return { eligible: false, reasonCode: "profile_missing" };
   }
@@ -57,11 +71,8 @@ export function resolveAuthProfileEligibility(params: {
       return { eligible: false, reasonCode: "provider_mismatch" };
     }
     const configuredMode = resolveProfileMode(profileConfig.mode ?? (profileConfig as { type?: string }).type);
-    if (configuredMode !== cred.type) {
-      const oauthCompatible = configuredMode === "oauth" && cred.type === "token";
-      if (!oauthCompatible) {
-        return { eligible: false, reasonCode: "mode_mismatch" };
-      }
+    if (!isCompatibleMode(configuredMode, cred.type)) {
+      return { eligible: false, reasonCode: "mode_mismatch" };
     }
   }
   const credentialEligibility = evaluateStoredCredentialEligibility({
