@@ -181,7 +181,7 @@ function resolveDeviceSignaturePayloadVersion(params: {
     role: params.role,
     scopes: params.scopes,
     signedAtMs: params.signedAtMs,
-    token: params.connectParams.auth?.token ?? params.connectParams.auth?.deviceToken ?? null,
+    token: params.connectParams.auth?.deviceToken ?? params.connectParams.auth?.token ?? null,
     nonce: params.nonce,
     platform: params.connectParams.client.platform,
     deviceFamily: params.connectParams.client.deviceFamily,
@@ -197,7 +197,7 @@ function resolveDeviceSignaturePayloadVersion(params: {
     role: params.role,
     scopes: params.scopes,
     signedAtMs: params.signedAtMs,
-    token: params.connectParams.auth?.token ?? params.connectParams.auth?.deviceToken ?? null,
+    token: params.connectParams.auth?.deviceToken ?? params.connectParams.auth?.token ?? null,
     nonce: params.nonce,
   });
   if (verifyDeviceSignature(params.device.publicKey, payloadV2, params.device.signature)) {
