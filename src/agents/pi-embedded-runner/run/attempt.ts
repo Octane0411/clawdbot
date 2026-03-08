@@ -137,6 +137,83 @@ type PromptBuildHookRunner = {
   ) => Promise<PluginHookBeforeAgentStartResult | undefined>;
 };
 
+type SessionMessageLike = {
+  message?: { role?: unknown };
+  type?: unknown;
+  id?: unknown;
+  parentId?: unknown;
+};
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function getSessionEntryId(entry: unknown): string | undefined {
+  if (!isObject(entry)) {
+    return undefined;
+  }
+  const { id } = entry;
+  return isNonEmptyString(id) ? id : undefined;
+}
+
+function isLeafSessionEntryReachable(sessionManager: SessionManager, leafEntry: unknown): boolean {
+  const entries = sessionManager.getEntries();
+  if (!Array.isArray(entries)) {
+    return true;
+  }
+
+  const byId = new Map<string, SessionMessageLike>();
+  for (const entry of entries) {
+    const id = getSessionEntryId(entry);
+    if (!id) {
+      continue;
+    }
+    byId.set(id, entry as SessionMessageLike);
+  }
+
+  let cursor = leafEntry as SessionMessageLike | undefined;
+  if (!isObject(cursor)) {
+    return false;
+  }
+
+  const visited = new Set<string>();
+
+  while (true) {
+    const parentId = cursor.parentId;
+    if (parentId == null || parentId === "") {
+      return true;
+    }
+    if (!isNonEmptyString(parentId)) {
+      return false;
+    }
+    if (visited.has(parentId)) {
+      return false;
+    }
+    visited.add(parentId);
+    const parent = byId.get(parentId);
+    if (!parent || !isObject(parent)) {
+      return false;
+    }
+    cursor = parent;
+  }
+}
+
+function buildMessageEntryRole(entry: unknown): string | undefined {
+  if (!isObject(entry)) {
+    return undefined;
+  }
+  const message = entry.message;
+  if (!isObject(message)) {
+    return undefined;
+  }
+  const role = message.role;
+  return isNonEmptyString(role) ? role : undefined;
+}
+
 export function isOllamaCompatProvider(model: {
   provider?: string;
   baseUrl?: string;
@@ -1421,9 +1498,19 @@ export async function runEmbeddedAttempt(
 
         // Repair orphaned trailing user messages so new prompts don't violate role ordering.
         const leafEntry = sessionManager.getLeafEntry();
-        if (leafEntry?.type === "message" && leafEntry.message.role === "user") {
-          if (leafEntry.parentId) {
-            sessionManager.branch(leafEntry.parentId);
+        const leafEntryReachable = isLeafSessionEntryReachable(sessionManager, leafEntry);
+        if (!leafEntryReachable) {
+          sessionManager.resetLeaf();
+          const sessionContext = sessionManager.buildSessionContext();
+          activeSession.agent.replaceMessages(sessionContext.messages);
+          log.warn(
+            `Removed unreachable session tail to prevent orphaned context. ` +
+              `runId=${params.runId} sessionId=${params.sessionId}`,
+          );
+        } else if (leafEntry?.type === "message" && buildMessageEntryRole(leafEntry) === "user") {
+          const parentId = isNonEmptyString(leafEntry.parentId) ? leafEntry.parentId : null;
+          if (parentId) {
+            sessionManager.branch(parentId);
           } else {
             sessionManager.resetLeaf();
           }
