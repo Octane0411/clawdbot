@@ -67,6 +67,22 @@ const formatTokensCell = (
   return colorByPct(padded, pct, rich);
 };
 
+const resolveDisplayTotalTokens = (
+  row: Pick<SessionDisplayRow, "totalTokens" | "inputTokens" | "outputTokens">,
+) => {
+  const freshTotal = resolveFreshSessionTotalTokens(row);
+  if (freshTotal !== undefined) {
+    return freshTotal;
+  }
+  if (typeof row.totalTokens === "number") {
+    return row.totalTokens;
+  }
+  if (typeof row.inputTokens === "number" || typeof row.outputTokens === "number") {
+    return (row.inputTokens ?? 0) + (row.outputTokens ?? 0);
+  }
+  return undefined;
+};
+
 const formatKindCell = (kind: SessionRow["kind"], rich: boolean) => {
   const label = kind.padEnd(KIND_PAD);
   if (!rich) {
@@ -208,7 +224,7 @@ export async function sessionsCommand(
   for (const row of rows) {
     const model = resolveSessionDisplayModel(cfg, row, displayDefaults);
     const contextTokens = row.contextTokens ?? lookupContextTokens(model) ?? configContextTokens;
-    const total = resolveFreshSessionTotalTokens(row);
+    const total = resolveDisplayTotalTokens(row);
 
     const line = [
       ...(showAgentColumn

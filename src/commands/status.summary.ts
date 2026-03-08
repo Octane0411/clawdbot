@@ -144,9 +144,15 @@ export async function getStatusSummary(
             contextTokensOverride: entry?.contextTokens,
             fallbackContextTokens: configContextTokens ?? undefined,
           }) ?? null;
-        const total = resolveFreshSessionTotalTokens(entry);
-        const totalTokensFresh =
-          typeof entry?.totalTokens === "number" ? entry?.totalTokensFresh !== false : false;
+        const freshTotal = resolveFreshSessionTotalTokens(entry);
+        const total =
+          freshTotal ??
+          (typeof entry?.totalTokens === "number"
+            ? entry.totalTokens
+            : typeof entry?.inputTokens === "number" || typeof entry?.outputTokens === "number"
+              ? (entry?.inputTokens ?? 0) + (entry?.outputTokens ?? 0)
+              : undefined);
+        const totalTokensFresh = freshTotal !== undefined;
         const remaining =
           contextTokens != null && total !== undefined ? Math.max(0, contextTokens - total) : null;
         const pct =

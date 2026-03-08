@@ -34,6 +34,15 @@ function createUnknownUsageSessionStore() {
   return {
     "+1000": {
       updatedAt: Date.now() - 60_000,
+      model: "pi:opus",
+    },
+  };
+}
+
+function createNoFreshTotalButKnownUsageStore() {
+  return {
+    "+1000": {
+      updatedAt: Date.now() - 60_000,
       inputTokens: 2_000,
       outputTokens: 3_000,
       contextTokens: 10_000,
@@ -423,6 +432,20 @@ describe("statusCommand", () => {
       expect(payload.sessions.recent[0].percentUsed).toBeNull();
       expect(payload.sessions.recent[0].remainingTokens).toBeNull();
     });
+  });
+
+  it("shows derived token usage when totalTokens is missing", async () => {
+    const originalLoadSessionStore = mocks.loadSessionStore.getMockImplementation();
+    mocks.loadSessionStore.mockReturnValue(createNoFreshTotalButKnownUsageStore());
+    try {
+      runtimeLogMock.mockClear();
+      const logs = await runStatusAndGetLogs();
+      expect(logs.some((line) => line.includes("5.0k/10.0k (50%)"))).toBe(true);
+    } finally {
+      if (originalLoadSessionStore) {
+        mocks.loadSessionStore.mockImplementation(originalLoadSessionStore);
+      }
+    }
   });
 
   it("prints unknown usage in formatted output when totalTokens is missing", async () => {
